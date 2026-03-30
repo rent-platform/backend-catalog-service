@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: catalog-service
+
+  datasource:
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5433}/${PG_DATABASE:catalog_db}
+    username: ${PG_USER:postgres}
+    password: ${PG_PASSWORD:12345}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+
+  flyway:
+    enabled: true
+    locations: filesystem:database/migrations
+
+server:
+  port: 8081
