@@ -6,7 +6,7 @@ CREATE TABLE categories (
     slug            VARCHAR(120) NOT NULL,
     parent_id       BIGINT       REFERENCES categories(id) ON DELETE SET NULL,
     sort_order      INT          NOT NULL DEFAULT 0,
-    is_active       BOOLEAN NOT  NULL DEFAULT TRUE,
+    is_active       BOOLEAN      NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     deleted_at      TIMESTAMPTZ
@@ -32,12 +32,13 @@ CREATE INDEX categories_deleted_at_idx
 CREATE TABLE items (
     id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
     owner_id           UUID          NOT NULL,
-    category_id        BIGINT        REFERENCES categories(id),
+    category_id        BIGINT        NOT NULL REFERENCES categories(id),
     title              VARCHAR(200)  NOT NULL,
     item_description   TEXT,
     price_per_day      DECIMAL(10,2),
     price_per_hour     DECIMAL(10,2),
     deposit_amount     DECIMAL(10,2) NOT NULL DEFAULT 0,
+    city               VARCHAR(100)  NOT NULL,
     pickup_location    TEXT,
     status             VARCHAR(20)   NOT NULL DEFAULT 'draft'
         CHECK (status IN ('draft', 'moderation', 'active', 'rejected', 'archived')),
