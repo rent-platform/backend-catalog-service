@@ -27,5 +27,5 @@ public interface CatalogService {
 
     MessageResponse deleteMyItem(UUID ownerId, UUID itemId);
 
-    List<CategoryResponse> getActiveCategories();
+
 }

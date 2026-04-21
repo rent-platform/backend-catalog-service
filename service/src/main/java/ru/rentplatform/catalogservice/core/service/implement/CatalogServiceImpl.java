@@ -9,15 +9,24 @@ import ru.rentplatform.catalogservice.api.dto.request.CreateItemRequest;
 import ru.rentplatform.catalogservice.api.dto.request.ItemFilterRequest;
 import ru.rentplatform.catalogservice.api.dto.request.PhotoRequest;
 import ru.rentplatform.catalogservice.api.dto.request.UpdateItemRequest;
-import ru.rentplatform.catalogservice.api.dto.response.*;
+import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
+import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
+import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
+import ru.rentplatform.catalogservice.api.dto.response.PhotoResponse;
 import ru.rentplatform.catalogservice.api.exception.AccessDeniedException;
 import ru.rentplatform.catalogservice.api.exception.CategoryNotFoundException;
 import ru.rentplatform.catalogservice.api.exception.ItemNotFoundException;
-import ru.rentplatform.catalogservice.core.dao.entity.*;
-import ru.rentplatform.catalogservice.core.dao.repository.*;
+import ru.rentplatform.catalogservice.core.dao.entity.Category;
+import ru.rentplatform.catalogservice.core.dao.entity.Item;
+import ru.rentplatform.catalogservice.core.dao.entity.ItemStatus;
+import ru.rentplatform.catalogservice.core.dao.entity.Photo;
+import ru.rentplatform.catalogservice.core.dao.repository.CategoryRepository;
+import ru.rentplatform.catalogservice.core.dao.repository.ItemRepository;
+import ru.rentplatform.catalogservice.core.dao.repository.PhotoRepository;
 import ru.rentplatform.catalogservice.core.mapper.CatalogMapper;
 import ru.rentplatform.catalogservice.core.service.CatalogService;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -31,7 +40,6 @@ public class CatalogServiceImpl implements CatalogService {
     private final CategoryRepository categoryRepository;
     private final ItemRepository itemRepository;
     private final PhotoRepository photoRepository;
-    private final AvailabilityRepository availabilityRepository;
     private final CatalogMapper catalogMapper;
 
     @Override
@@ -123,12 +131,8 @@ public class CatalogServiceImpl implements CatalogService {
     @Override
     @Transactional
     public ItemResponse updateMyItem(UUID ownerId, UUID itemId, UpdateItemRequest request) {
-        Item item = itemRepository.findByIdAndDeletedAtIsNull(itemId)
+        Item item = itemRepository.findByIdAndOwnerIdAndDeletedAtIsNull(itemId, ownerId)
                 .orElseThrow(() -> new ItemNotFoundException("Item not found"));
-
-        if (!item.getOwnerId().equals(ownerId)) {
-            throw new AccessDeniedException("You do not have access to this item");
-        }
 
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findByIdAndDeletedAtIsNullAndIsActiveTrue(request.getCategoryId())
@@ -181,12 +185,8 @@ public class CatalogServiceImpl implements CatalogService {
     @Override
     @Transactional
     public MessageResponse deleteMyItem(UUID ownerId, UUID itemId) {
-        Item item = itemRepository.findByIdAndDeletedAtIsNull(itemId)
+        Item item = itemRepository.findByIdAndOwnerIdAndDeletedAtIsNull(itemId, ownerId)
                 .orElseThrow(() -> new ItemNotFoundException("Item not found"));
-
-        if (!item.getOwnerId().equals(ownerId)) {
-            throw new AccessDeniedException("You do not have access to this item");
-        }
 
         item.setDeletedAt(OffsetDateTime.now());
         item.setUpdatedAt(OffsetDateTime.now());
@@ -197,23 +197,14 @@ public class CatalogServiceImpl implements CatalogService {
                 .build();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<CategoryResponse> getActiveCategories() {
-        return categoryRepository.findAllByDeletedAtIsNullAndIsActiveTrueOrderBySortOrderAsc()
-                .stream()
-                .map(catalogMapper::toCategoryResponse)
-                .toList();
-    }
-
     private void savePhotos(Item item, List<PhotoRequest> photoRequests) {
         if (photoRequests == null || photoRequests.isEmpty()) {
             return;
         }
 
         OffsetDateTime now = OffsetDateTime.now();
-
         List<Photo> photos = new ArrayList<>();
+
         for (PhotoRequest photoRequest : photoRequests) {
             photos.add(Photo.builder()
                     .id(UUID.randomUUID())
@@ -251,7 +242,7 @@ public class CatalogServiceImpl implements CatalogService {
         return response;
     }
 
-    private void validatePrices(java.math.BigDecimal pricePerDay, java.math.BigDecimal pricePerHour) {
+    private void validatePrices(BigDecimal pricePerDay, BigDecimal pricePerHour) {
         if (pricePerDay == null && pricePerHour == null) {
             throw new IllegalArgumentException("At least one price must be specified");
         }

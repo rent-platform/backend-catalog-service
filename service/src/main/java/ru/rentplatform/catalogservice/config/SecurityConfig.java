@@ -26,6 +26,7 @@ public class SecurityConfig {
                                 "/error"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalog/categories").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/catalog/categories/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalog/items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalog/items/*").permitAll()
                         .anyRequest().authenticated()

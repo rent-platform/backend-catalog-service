@@ -12,13 +12,11 @@ import org.springframework.web.bind.annotation.*;
 import ru.rentplatform.catalogservice.api.dto.request.CreateItemRequest;
 import ru.rentplatform.catalogservice.api.dto.request.ItemFilterRequest;
 import ru.rentplatform.catalogservice.api.dto.request.UpdateItemRequest;
-import ru.rentplatform.catalogservice.api.dto.response.CategoryResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
 import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
 import ru.rentplatform.catalogservice.core.service.CatalogService;
 
-import java.util.List;
 import java.util.UUID;
 
 import static ru.rentplatform.catalogservice.api.ApiPaths.CATALOG;
@@ -30,11 +28,6 @@ import static ru.rentplatform.catalogservice.api.ApiPaths.CATALOG;
 public class CatalogController {
 
     private final CatalogService catalogService;
-
-    @GetMapping("/categories")
-    public List<CategoryResponse> getCategories() {
-        return catalogService.getActiveCategories();
-    }
 
     @GetMapping("/items")
     public Page<ItemShortResponse> getActiveItems(

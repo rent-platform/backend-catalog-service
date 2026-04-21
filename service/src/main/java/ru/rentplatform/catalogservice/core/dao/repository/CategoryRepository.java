@@ -10,6 +10,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     Optional<Category> findByIdAndDeletedAtIsNullAndIsActiveTrue(Long id);
 
+    Optional<Category> findByIdAndDeletedAtIsNull(Long id);
+
     List<Category> findAllByDeletedAtIsNullAndIsActiveTrueOrderBySortOrderAsc();
 
     List<Category> findAllByParentIsNullAndDeletedAtIsNullAndIsActiveTrueOrderBySortOrderAsc();
@@ -17,4 +19,8 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
     List<Category> findAllByParentIdAndDeletedAtIsNullAndIsActiveTrueOrderBySortOrderAsc(Long parentId);
 
     Optional<Category> findBySlugAndDeletedAtIsNull(String slug);
+
+    boolean existsBySlugAndDeletedAtIsNull(String slug);
+
+    boolean existsBySlugAndDeletedAtIsNullAndIdNot(String slug, Long id);
 }

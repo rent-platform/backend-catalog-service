@@ -29,6 +29,12 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(CategoryAlreadyExistsException.class)
+    public ResponseEntity<MessageResponse> handleCategoryAlreadyExists(CategoryAlreadyExistsException ex) {
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<MessageResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()
