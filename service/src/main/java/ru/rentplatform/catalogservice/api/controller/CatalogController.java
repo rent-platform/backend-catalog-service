@@ -16,6 +16,7 @@ import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
 import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
 import ru.rentplatform.catalogservice.core.service.CatalogService;
+import org.springdoc.core.annotations.ParameterObject;
 
 import java.util.UUID;
 
@@ -24,17 +25,19 @@ import static ru.rentplatform.catalogservice.api.ApiPaths.CATALOG;
 @RestController
 @RequestMapping(CATALOG)
 @RequiredArgsConstructor
+@ParameterObject
 @Validated
 public class CatalogController {
 
     private final CatalogService catalogService;
+
 
     @GetMapping("/items")
     public Page<ItemShortResponse> getActiveItems(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) String city,
             @RequestParam(required = false) String query,
-            Pageable pageable
+            @ParameterObject Pageable pageable
     ) {
         ItemFilterRequest filter = ItemFilterRequest.builder()
                 .categoryId(categoryId)

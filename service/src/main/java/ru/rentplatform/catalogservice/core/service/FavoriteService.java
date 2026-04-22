@@ -3,8 +3,8 @@ package ru.rentplatform.catalogservice.core.service;
 import org.springframework.data.domain.Page;
 import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
 import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
+import org.springframework.data.domain.Pageable;
 
-import java.awt.print.Pageable;
 import java.util.UUID;
 
 public interface FavoriteService {

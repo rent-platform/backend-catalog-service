@@ -13,7 +13,6 @@ import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
 import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
 import ru.rentplatform.catalogservice.api.dto.response.PhotoResponse;
-import ru.rentplatform.catalogservice.api.exception.AccessDeniedException;
 import ru.rentplatform.catalogservice.api.exception.CategoryNotFoundException;
 import ru.rentplatform.catalogservice.api.exception.ItemNotFoundException;
 import ru.rentplatform.catalogservice.core.dao.entity.Category;

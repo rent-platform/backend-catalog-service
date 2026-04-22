@@ -40,8 +40,8 @@ CREATE TABLE items (
     deposit_amount     DECIMAL(10,2) NOT NULL DEFAULT 0,
     city               VARCHAR(100)  NOT NULL,
     pickup_location    TEXT,
-    status             VARCHAR(20)   NOT NULL DEFAULT 'draft'
-        CHECK (status IN ('draft', 'moderation', 'active', 'rejected', 'archived')),
+    status             VARCHAR(20)   NOT NULL DEFAULT 'DRAFT'
+        CHECK (status IN ('DRAFT', 'MODERATION', 'ACTIVE', 'REJECTED', 'ARCHIVED')),
     moderation_comment TEXT,
     views_count        INT         NOT NULL DEFAULT 0,
     created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -95,6 +95,19 @@ CREATE INDEX availability_date_idx
 
 CREATE INDEX availability_item_available_idx
     ON availability(item_id, is_available);
+
+CREATE TABLE favorite_items (
+    user_id    UUID        NOT NULL,
+    item_id    UUID        NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, item_id)
+);
+
+CREATE INDEX favorite_items_user_id_idx
+    ON favorite_items(user_id);
+
+CREATE INDEX favorite_items_item_id_idx
+    ON favorite_items(item_id);
 
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
