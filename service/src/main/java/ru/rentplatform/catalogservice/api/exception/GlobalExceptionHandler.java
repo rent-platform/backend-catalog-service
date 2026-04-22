@@ -35,6 +35,12 @@ public class GlobalExceptionHandler {
                 .body(new MessageResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(InvalidItemStatusException.class)
+    public ResponseEntity<MessageResponse> handleInvalidItemStatus(InvalidItemStatusException ex) {
+        return ResponseEntity.badRequest()
+                .body(new MessageResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<MessageResponse> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()
