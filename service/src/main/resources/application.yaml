@@ -18,6 +18,7 @@ spring:
     locations: filesystem:database/migrations
 
 app:
+  user-service-url: http://localhost:8081
   swagger:
     gateway-url: http://localhost:8080
     catalog-service-url: http://localhost:8082

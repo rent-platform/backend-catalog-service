@@ -23,5 +23,7 @@ public class ItemShortResponse {
 
     private String status;
 
+    private Boolean isFavorite;
+
     private String mainPhotoUrl;
 }

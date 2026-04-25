@@ -46,15 +46,17 @@ public class FavoriteServiceImpl implements FavoriteService {
         }
 
         boolean alreadyExists = favoriteItemRepository.existsByIdUserIdAndIdItemId(userId, itemId);
-        if (!alreadyExists) {
-            FavoriteItem favoriteItem = FavoriteItem.builder()
-                    .id(new FavoriteItemId(userId, itemId))
-                    .item(item)
-                    .createdAt(OffsetDateTime.now())
-                    .build();
-
-            favoriteItemRepository.save(favoriteItem);
+        if (alreadyExists) {
+            throw new IllegalArgumentException("Item is already in favorites");
         }
+
+        FavoriteItem favoriteItem = FavoriteItem.builder()
+                .id(new FavoriteItemId(userId, itemId))
+                .item(item)
+                .createdAt(OffsetDateTime.now())
+                .build();
+
+        favoriteItemRepository.save(favoriteItem);
 
         return MessageResponse.builder()
                 .message("Item added to favorites")
@@ -94,6 +96,7 @@ public class FavoriteServiceImpl implements FavoriteService {
 
         ItemShortResponse response = catalogMapper.toItemShortResponse(item);
         response.setMainPhotoUrl(mainPhotoUrl);
+        response.setIsFavorite(true);
         return response;
     }
 }

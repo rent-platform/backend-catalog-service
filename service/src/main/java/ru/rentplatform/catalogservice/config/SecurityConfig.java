@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/catalog/categories/*").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalog/items").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/catalog/items/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/catalog/items/*/similar").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));

@@ -1,21 +1,26 @@
 package ru.rentplatform.catalogservice.core.service.implement;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.rentplatform.catalogservice.api.dto.request.RejectItemRequest;
 import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
+import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
 import ru.rentplatform.catalogservice.api.dto.response.PhotoResponse;
 import ru.rentplatform.catalogservice.api.exception.InvalidItemStatusException;
 import ru.rentplatform.catalogservice.api.exception.ItemNotFoundException;
 import ru.rentplatform.catalogservice.core.dao.entity.Item;
 import ru.rentplatform.catalogservice.core.dao.entity.ItemStatus;
+import ru.rentplatform.catalogservice.core.dao.entity.Photo;
 import ru.rentplatform.catalogservice.core.dao.repository.ItemRepository;
 import ru.rentplatform.catalogservice.core.dao.repository.PhotoRepository;
 import ru.rentplatform.catalogservice.core.mapper.CatalogMapper;
 import ru.rentplatform.catalogservice.core.service.ItemStatusService;
 
 import java.time.OffsetDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -117,6 +122,31 @@ public class ItemStatusServiceImpl implements ItemStatusService {
         return buildItemResponse(savedItem);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ItemShortResponse> getItemsForModeration(Pageable pageable) {
+        return itemRepository.findAllByDeletedAtIsNullAndStatus(ItemStatus.MODERATION, pageable)
+                .map(this::buildItemShortResponse);
+    }
+
+    @Override
+    @Transactional
+    public ItemResponse restoreArchivedItem(UUID ownerId, UUID itemId) {
+        Item item = itemRepository.findByIdAndOwnerIdAndDeletedAtIsNull(itemId, ownerId)
+                .orElseThrow(() -> new ItemNotFoundException("Item not found"));
+
+        if (item.getStatus() != ItemStatus.ARCHIVED) {
+            throw new InvalidItemStatusException("Only archived items can be restored");
+        }
+
+        item.setStatus(ItemStatus.DRAFT);
+        item.setModerationComment(null);
+        item.setUpdatedAt(OffsetDateTime.now());
+
+        Item savedItem = itemRepository.save(item);
+        return buildItemResponse(savedItem);
+    }
+
     private void validateItemBeforeModeration(Item item) {
         if (item.getCategory() == null) {
             throw new InvalidItemStatusException("Category is required");
@@ -152,6 +182,19 @@ public class ItemStatusServiceImpl implements ItemStatusService {
 
         ItemResponse response = catalogMapper.toItemResponse(item);
         response.setPhotos(photos);
+        return response;
+    }
+
+    private ItemShortResponse buildItemShortResponse(Item item) {
+        List<Photo> photos = photoRepository.findAllByItem_IdOrderBySortOrderAsc(item.getId());
+
+        String mainPhotoUrl = photos.stream()
+                .min(Comparator.comparing(Photo::getSortOrder))
+                .map(Photo::getPhotoUrl)
+                .orElse(null);
+
+        ItemShortResponse response = catalogMapper.toItemShortResponse(item);
+        response.setMainPhotoUrl(mainPhotoUrl);
         return response;
     }
 

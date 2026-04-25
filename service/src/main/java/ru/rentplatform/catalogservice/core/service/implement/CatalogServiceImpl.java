@@ -9,10 +9,7 @@ import ru.rentplatform.catalogservice.api.dto.request.CreateItemRequest;
 import ru.rentplatform.catalogservice.api.dto.request.ItemFilterRequest;
 import ru.rentplatform.catalogservice.api.dto.request.PhotoRequest;
 import ru.rentplatform.catalogservice.api.dto.request.UpdateItemRequest;
-import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
-import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
-import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
-import ru.rentplatform.catalogservice.api.dto.response.PhotoResponse;
+import ru.rentplatform.catalogservice.api.dto.response.*;
 import ru.rentplatform.catalogservice.api.exception.CategoryNotFoundException;
 import ru.rentplatform.catalogservice.api.exception.ItemNotFoundException;
 import ru.rentplatform.catalogservice.core.dao.entity.Category;
@@ -20,10 +17,12 @@ import ru.rentplatform.catalogservice.core.dao.entity.Item;
 import ru.rentplatform.catalogservice.core.dao.entity.ItemStatus;
 import ru.rentplatform.catalogservice.core.dao.entity.Photo;
 import ru.rentplatform.catalogservice.core.dao.repository.CategoryRepository;
+import ru.rentplatform.catalogservice.core.dao.repository.FavoriteItemRepository;
 import ru.rentplatform.catalogservice.core.dao.repository.ItemRepository;
 import ru.rentplatform.catalogservice.core.dao.repository.PhotoRepository;
 import ru.rentplatform.catalogservice.core.mapper.CatalogMapper;
 import ru.rentplatform.catalogservice.core.service.CatalogService;
+import ru.rentplatform.catalogservice.integration.client.UserClient;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -40,6 +39,8 @@ public class CatalogServiceImpl implements CatalogService {
     private final ItemRepository itemRepository;
     private final PhotoRepository photoRepository;
     private final CatalogMapper catalogMapper;
+    private final UserClient userClient;
+    private final FavoriteItemRepository favoriteItemRepository;
 
     @Override
     @Transactional
@@ -74,12 +75,12 @@ public class CatalogServiceImpl implements CatalogService {
 
         savePhotos(savedItem, request.getPhotos());
 
-        return buildItemResponse(savedItem);
+        return buildItemResponse(savedItem, ownerId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public ItemResponse getItemById(UUID itemId) {
+    public ItemResponse getItemById(UUID itemId, UUID currentUserId) {
         Item item = itemRepository.findByIdAndDeletedAtIsNull(itemId)
                 .orElseThrow(() -> new ItemNotFoundException("Item not found"));
 
@@ -87,44 +88,58 @@ public class CatalogServiceImpl implements CatalogService {
             throw new ItemNotFoundException("Item not found");
         }
 
-        return buildItemResponse(item);
+        return buildItemResponse(item, currentUserId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ItemShortResponse> getActiveItems(ItemFilterRequest filter, Pageable pageable) {
+    public Page<ItemShortResponse> getActiveItems(ItemFilterRequest filter,
+                                                  UUID currentUserId,
+                                                  Pageable pageable) {
+        Long categoryId = filter != null ? filter.getCategoryId() : null;
+        String city = filter != null ? normalize(filter.getCity()) : null;
+        String query = filter != null ? normalize(filter.getQuery()) : null;
+
+        BigDecimal minPricePerDay = filter != null ? filter.getMinPricePerDay() : null;
+        BigDecimal maxPricePerDay = filter != null ? filter.getMaxPricePerDay() : null;
+        BigDecimal minPricePerHour = filter != null ? filter.getMinPricePerHour() : null;
+        BigDecimal maxPricePerHour = filter != null ? filter.getMaxPricePerHour() : null;
+
+        validatePriceRange(minPricePerDay, maxPricePerDay, "price per day");
+        validatePriceRange(minPricePerHour, maxPricePerHour, "price per hour");
+
+        return itemRepository.searchActiveItems(
+                ItemStatus.ACTIVE,
+                categoryId,
+                city,
+                query,
+                minPricePerDay,
+                maxPricePerDay,
+                minPricePerHour,
+                maxPricePerHour,
+                pageable
+        ).map(item -> buildItemShortResponse(item, currentUserId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ItemShortResponse> getMyItems(UUID ownerId, ItemStatus status, Pageable pageable) {
         Page<Item> itemsPage;
 
-        if (filter != null && filter.getCategoryId() != null) {
-            itemsPage = itemRepository.findAllByCategoryIdAndDeletedAtIsNullAndStatus(
-                    filter.getCategoryId(),
-                    ItemStatus.ACTIVE,
-                    pageable
-            );
-        } else if (filter != null && filter.getCity() != null && !filter.getCity().isBlank()) {
-            itemsPage = itemRepository.findAllByCityIgnoreCaseAndDeletedAtIsNullAndStatus(
-                    filter.getCity().trim(),
-                    ItemStatus.ACTIVE,
-                    pageable
-            );
-        } else if (filter != null && filter.getQuery() != null && !filter.getQuery().isBlank()) {
-            itemsPage = itemRepository.findAllByTitleContainingIgnoreCaseAndDeletedAtIsNullAndStatus(
-                    filter.getQuery().trim(),
-                    ItemStatus.ACTIVE,
+        if (status != null) {
+            itemsPage = itemRepository.findAllByOwnerIdAndDeletedAtIsNullAndStatus(
+                    ownerId,
+                    status,
                     pageable
             );
         } else {
-            itemsPage = itemRepository.findAllByDeletedAtIsNullAndStatus(ItemStatus.ACTIVE, pageable);
+            itemsPage = itemRepository.findAllByOwnerIdAndDeletedAtIsNull(
+                    ownerId,
+                    pageable
+            );
         }
 
-        return itemsPage.map(this::buildItemShortResponse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ItemShortResponse> getMyItems(UUID ownerId, Pageable pageable) {
-        return itemRepository.findAllByOwnerIdAndDeletedAtIsNull(ownerId, pageable)
-                .map(this::buildItemShortResponse);
+        return itemsPage.map(item -> buildItemShortResponse(item, ownerId));
     }
 
     @Override
@@ -178,7 +193,7 @@ public class CatalogServiceImpl implements CatalogService {
             savePhotos(savedItem, request.getPhotos());
         }
 
-        return buildItemResponse(savedItem);
+        return buildItemResponse(savedItem, ownerId);
     }
 
     @Override
@@ -194,6 +209,27 @@ public class CatalogServiceImpl implements CatalogService {
         return MessageResponse.builder()
                 .message("Item deleted successfully")
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ItemShortResponse> getSimilarItems(UUID itemId,
+                                                   UUID currentUserId,
+                                                   Pageable pageable) {
+        Item item = itemRepository.findByIdAndDeletedAtIsNull(itemId)
+                .orElseThrow(() -> new ItemNotFoundException("Item not found"));
+
+        if (item.getStatus() != ItemStatus.ACTIVE) {
+            throw new ItemNotFoundException("Item not found");
+        }
+
+        return itemRepository.findSimilarItems(
+                item.getId(),
+                item.getCategory().getId(),
+                item.getCity(),
+                ItemStatus.ACTIVE,
+                pageable
+        ).map(similarItem -> buildItemShortResponse(similarItem, currentUserId));
     }
 
     private void savePhotos(Item item, List<PhotoRequest> photoRequests) {
@@ -217,7 +253,7 @@ public class CatalogServiceImpl implements CatalogService {
         photoRepository.saveAll(photos);
     }
 
-    private ItemResponse buildItemResponse(Item item) {
+    private ItemResponse buildItemResponse(Item item, UUID currentUserId) {
         List<PhotoResponse> photos = photoRepository.findAllByItem_IdOrderBySortOrderAsc(item.getId())
                 .stream()
                 .map(catalogMapper::toPhotoResponse)
@@ -225,10 +261,23 @@ public class CatalogServiceImpl implements CatalogService {
 
         ItemResponse response = catalogMapper.toItemResponse(item);
         response.setPhotos(photos);
+        response.setIsFavorite(isFavorite(currentUserId, item.getId()));
+
+        var ownerData = userClient.getUserPublicProfile(item.getOwnerId());
+
+        response.setOwner(
+                OwnerShortResponse.builder()
+                        .id(ownerData.getId())
+                        .nickname(ownerData.getNickname())
+                        .avatarUrl(ownerData.getAvatarUrl())
+                        .rating(ownerData.getRating())
+                        .build()
+        );
+
         return response;
     }
 
-    private ItemShortResponse buildItemShortResponse(Item item) {
+    private ItemShortResponse buildItemShortResponse(Item item, UUID currentUserId) {
         List<Photo> photos = photoRepository.findAllByItem_IdOrderBySortOrderAsc(item.getId());
 
         String mainPhotoUrl = photos.stream()
@@ -238,12 +287,45 @@ public class CatalogServiceImpl implements CatalogService {
 
         ItemShortResponse response = catalogMapper.toItemShortResponse(item);
         response.setMainPhotoUrl(mainPhotoUrl);
+        response.setIsFavorite(isFavorite(currentUserId, item.getId()));
+
         return response;
     }
 
     private void validatePrices(BigDecimal pricePerDay, BigDecimal pricePerHour) {
         if (pricePerDay == null && pricePerHour == null) {
             throw new IllegalArgumentException("At least one price must be specified");
+        }
+    }
+
+    private Boolean isFavorite(UUID currentUserId, UUID itemId) {
+        if (currentUserId == null) {
+            return false;
+        }
+
+        return favoriteItemRepository.existsByIdUserIdAndIdItemId(currentUserId, itemId);
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void validatePriceRange(BigDecimal min, BigDecimal max, String fieldName) {
+        if (min != null && min.signum() < 0) {
+            throw new IllegalArgumentException("Minimum " + fieldName + " cannot be negative");
+        }
+
+        if (max != null && max.signum() < 0) {
+            throw new IllegalArgumentException("Maximum " + fieldName + " cannot be negative");
+        }
+
+        if (min != null && max != null && min.compareTo(max) > 0) {
+            throw new IllegalArgumentException("Minimum " + fieldName + " cannot be greater than maximum " + fieldName);
         }
     }
 }

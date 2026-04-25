@@ -17,6 +17,8 @@ public class ItemResponse {
 
     private UUID ownerId;
 
+    private OwnerShortResponse owner;
+
     private CategoryResponse category;
 
     private String title;
@@ -34,6 +36,8 @@ public class ItemResponse {
     private String pickupLocation;
 
     private String status;
+
+    private Boolean isFavorite;
 
     private String moderationComment;
 
