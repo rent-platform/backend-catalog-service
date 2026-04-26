@@ -14,12 +14,6 @@ public interface CategoryRepository extends JpaRepository<Category, Long> {
 
     List<Category> findAllByDeletedAtIsNullAndIsActiveTrueOrderBySortOrderAsc();
 
-    List<Category> findAllByParentIsNullAndDeletedAtIsNullAndIsActiveTrueOrderBySortOrderAsc();
-
-    List<Category> findAllByParentIdAndDeletedAtIsNullAndIsActiveTrueOrderBySortOrderAsc(Long parentId);
-
-    Optional<Category> findBySlugAndDeletedAtIsNull(String slug);
-
     boolean existsBySlugAndDeletedAtIsNull(String slug);
 
     boolean existsBySlugAndDeletedAtIsNullAndIdNot(String slug, Long id);

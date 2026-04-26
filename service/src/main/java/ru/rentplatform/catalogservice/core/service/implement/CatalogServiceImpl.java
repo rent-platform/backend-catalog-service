@@ -97,8 +97,8 @@ public class CatalogServiceImpl implements CatalogService {
                                                   UUID currentUserId,
                                                   Pageable pageable) {
         Long categoryId = filter != null ? filter.getCategoryId() : null;
-        String city = filter != null ? normalize(filter.getCity()) : null;
-        String query = filter != null ? normalize(filter.getQuery()) : null;
+        String city = filter != null ? normalizeTextFilter(filter.getCity()) : "";
+        String searchQuery = filter != null ? normalizeTextFilter(filter.getQuery()) : "";
 
         BigDecimal minPricePerDay = filter != null ? filter.getMinPricePerDay() : null;
         BigDecimal maxPricePerDay = filter != null ? filter.getMaxPricePerDay() : null;
@@ -112,7 +112,7 @@ public class CatalogServiceImpl implements CatalogService {
                 ItemStatus.ACTIVE,
                 categoryId,
                 city,
-                query,
+                searchQuery,
                 minPricePerDay,
                 maxPricePerDay,
                 minPricePerHour,
@@ -232,6 +232,22 @@ public class CatalogServiceImpl implements CatalogService {
         ).map(similarItem -> buildItemShortResponse(similarItem, currentUserId));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ItemDealInfoResponse getItemDealInfo(UUID itemId) {
+        Item item = itemRepository.findByIdAndDeletedAtIsNull(itemId)
+                .orElseThrow(() -> new ItemNotFoundException("Item not found"));
+
+        return ItemDealInfoResponse.builder()
+                .id(item.getId())
+                .ownerId(item.getOwnerId())
+                .status(item.getStatus().name())
+                .pricePerDay(item.getPricePerDay())
+                .pricePerHour(item.getPricePerHour())
+                .depositAmount(item.getDepositAmount())
+                .build();
+    }
+
     private void savePhotos(Item item, List<PhotoRequest> photoRequests) {
         if (photoRequests == null || photoRequests.isEmpty()) {
             return;
@@ -306,13 +322,13 @@ public class CatalogServiceImpl implements CatalogService {
         return favoriteItemRepository.existsByIdUserIdAndIdItemId(currentUserId, itemId);
     }
 
-    private String normalize(String value) {
+    private String normalizeTextFilter(String value) {
         if (value == null) {
-            return null;
+            return "";
         }
 
         String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        return trimmed.isEmpty() ? "" : trimmed.toLowerCase();
     }
 
     private void validatePriceRange(BigDecimal min, BigDecimal max, String fieldName) {

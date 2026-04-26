@@ -22,12 +22,6 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
 
     Page<Item> findAllByOwnerIdAndDeletedAtIsNull(UUID ownerId, Pageable pageable);
 
-    Page<Item> findAllByCategoryIdAndDeletedAtIsNullAndStatus(Long categoryId, ItemStatus status, Pageable pageable);
-
-    Page<Item> findAllByCityIgnoreCaseAndDeletedAtIsNullAndStatus(String city, ItemStatus status, Pageable pageable);
-
-    Page<Item> findAllByTitleContainingIgnoreCaseAndDeletedAtIsNullAndStatus(String title, ItemStatus status, Pageable pageable);
-
     Page<Item> findAllByOwnerIdAndDeletedAtIsNullAndStatus(UUID ownerId, ItemStatus status, Pageable pageable);
 
     @Query("""
@@ -35,8 +29,8 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
         WHERE i.deletedAt IS NULL
           AND i.status = :status
           AND (:categoryId IS NULL OR i.category.id = :categoryId)
-          AND (:city IS NULL OR LOWER(i.city) = LOWER(:city))
-          AND (:query IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :query, '%')))
+          AND (:city = '' OR LOWER(i.city) = :city)
+          AND (:searchQuery = '' OR LOWER(i.title) LIKE CONCAT('%', :searchQuery, '%'))
           AND (:minPricePerDay IS NULL OR i.pricePerDay >= :minPricePerDay)
           AND (:maxPricePerDay IS NULL OR i.pricePerDay <= :maxPricePerDay)
           AND (:minPricePerHour IS NULL OR i.pricePerHour >= :minPricePerHour)
@@ -46,7 +40,7 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
             @Param("status") ItemStatus status,
             @Param("categoryId") Long categoryId,
             @Param("city") String city,
-            @Param("query") String query,
+            @Param("searchQuery") String searchQuery,
             @Param("minPricePerDay") BigDecimal minPricePerDay,
             @Param("maxPricePerDay") BigDecimal maxPricePerDay,
             @Param("minPricePerHour") BigDecimal minPricePerHour,

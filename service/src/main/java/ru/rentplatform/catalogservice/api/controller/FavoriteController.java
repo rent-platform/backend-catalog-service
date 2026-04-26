@@ -14,6 +14,7 @@ import ru.rentplatform.catalogservice.core.service.FavoriteService;
 import java.util.UUID;
 
 import static ru.rentplatform.catalogservice.api.ApiPaths.CATALOG;
+import static ru.rentplatform.catalogservice.core.util.PageableUtils.buildPageable;
 
 @RestController
 @RequestMapping(CATALOG + "/favorites")
@@ -38,9 +39,17 @@ public class FavoriteController {
     }
 
     @GetMapping("/my")
-    public Page<ItemShortResponse> getMyFavorites(@AuthenticationPrincipal Jwt jwt,
-                                                  Pageable pageable) {
+    public Page<ItemShortResponse> getMyFavorites(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection
+    ) {
+
         UUID userId = UUID.fromString(jwt.getSubject());
+        Pageable pageable = buildPageable(page, size, sortBy, sortDirection);
+
         return favoriteService.getMyFavorites(userId, pageable);
     }
 

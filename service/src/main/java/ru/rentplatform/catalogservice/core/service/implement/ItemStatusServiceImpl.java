@@ -197,5 +197,4 @@ public class ItemStatusServiceImpl implements ItemStatusService {
         response.setMainPhotoUrl(mainPhotoUrl);
         return response;
     }
-
 }

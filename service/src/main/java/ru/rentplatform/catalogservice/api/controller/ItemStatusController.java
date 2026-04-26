@@ -16,6 +16,7 @@ import ru.rentplatform.catalogservice.core.service.ItemStatusService;
 import java.util.UUID;
 
 import static ru.rentplatform.catalogservice.api.ApiPaths.CATALOG;
+import static ru.rentplatform.catalogservice.core.util.PageableUtils.buildPageable;
 
 @RestController
 @RequiredArgsConstructor
@@ -57,7 +58,14 @@ public class ItemStatusController {
     }
 
     @GetMapping(CATALOG + "/admin/items/moderation")
-    public Page<ItemShortResponse> getItemsForModeration(Pageable pageable) {
+    public Page<ItemShortResponse> getItemsForModeration(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection
+    ) {
+        Pageable pageable = buildPageable(page, size, sortBy, sortDirection);
+
         return itemStatusService.getItemsForModeration(pageable);
     }
 

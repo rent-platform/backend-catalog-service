@@ -5,10 +5,7 @@ import org.springframework.data.domain.Pageable;
 import ru.rentplatform.catalogservice.api.dto.request.CreateItemRequest;
 import ru.rentplatform.catalogservice.api.dto.request.ItemFilterRequest;
 import ru.rentplatform.catalogservice.api.dto.request.UpdateItemRequest;
-import ru.rentplatform.catalogservice.api.dto.response.CategoryResponse;
-import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
-import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
-import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
+import ru.rentplatform.catalogservice.api.dto.response.*;
 import ru.rentplatform.catalogservice.core.dao.entity.ItemStatus;
 
 import java.util.List;
@@ -29,4 +26,6 @@ public interface CatalogService {
     MessageResponse deleteMyItem(UUID ownerId, UUID itemId);
 
     Page<ItemShortResponse> getSimilarItems(UUID itemId, UUID currentUserId, Pageable pageable);
+
+    ItemDealInfoResponse getItemDealInfo(UUID itemId);
 }

@@ -12,17 +12,20 @@ import org.springframework.web.bind.annotation.*;
 import ru.rentplatform.catalogservice.api.dto.request.CreateItemRequest;
 import ru.rentplatform.catalogservice.api.dto.request.ItemFilterRequest;
 import ru.rentplatform.catalogservice.api.dto.request.UpdateItemRequest;
+import ru.rentplatform.catalogservice.api.dto.response.ItemDealInfoResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
 import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
 import ru.rentplatform.catalogservice.core.dao.entity.ItemStatus;
 import ru.rentplatform.catalogservice.core.service.CatalogService;
 import org.springdoc.core.annotations.ParameterObject;
+import ru.rentplatform.catalogservice.core.util.PageableUtils;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 import static ru.rentplatform.catalogservice.api.ApiPaths.CATALOG;
+import static ru.rentplatform.catalogservice.core.util.PageableUtils.buildPageable;
 
 @RestController
 @RequestMapping(CATALOG)
@@ -44,9 +47,14 @@ public class CatalogController {
             @RequestParam(required = false) BigDecimal maxPricePerDay,
             @RequestParam(required = false) BigDecimal minPricePerHour,
             @RequestParam(required = false) BigDecimal maxPricePerHour,
-            Pageable pageable
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection
     ) {
         UUID currentUserId = jwt != null ? UUID.fromString(jwt.getSubject()) : null;
+
+        Pageable pageable = buildPageable(page, size, sortBy, sortDirection);
 
         ItemFilterRequest filter = ItemFilterRequest.builder()
                 .categoryId(categoryId)
@@ -81,9 +89,14 @@ public class CatalogController {
     public Page<ItemShortResponse> getMyItems(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(required = false) ItemStatus status,
-            Pageable pageable
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection
     ) {
         UUID ownerId = UUID.fromString(jwt.getSubject());
+        Pageable pageable = buildPageable(page, size, sortBy, sortDirection);
+
         return catalogService.getMyItems(ownerId, status, pageable);
     }
 
@@ -108,9 +121,19 @@ public class CatalogController {
     public Page<ItemShortResponse> getSimilarItems(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID itemId,
-            Pageable pageable
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection
     ) {
         UUID currentUserId = jwt != null ? UUID.fromString(jwt.getSubject()) : null;
+        Pageable pageable = buildPageable(page, size, sortBy, sortDirection);
+
         return catalogService.getSimilarItems(itemId, currentUserId, pageable);
+    }
+
+    @GetMapping("/items/{itemId}/deal-info")
+    public ItemDealInfoResponse getItemDealInfo(@PathVariable UUID itemId) {
+        return catalogService.getItemDealInfo(itemId);
     }
 }
