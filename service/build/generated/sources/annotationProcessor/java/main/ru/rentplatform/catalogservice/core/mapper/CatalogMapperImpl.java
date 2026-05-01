@@ -1,18 +1,24 @@
 package ru.rentplatform.catalogservice.core.mapper;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import javax.annotation.processing.Generated;
 import org.springframework.stereotype.Component;
+import ru.rentplatform.catalogservice.api.dto.response.AvailabilityResponse;
 import ru.rentplatform.catalogservice.api.dto.response.CategoryResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
 import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
 import ru.rentplatform.catalogservice.api.dto.response.PhotoResponse;
+import ru.rentplatform.catalogservice.core.dao.entity.Availability;
+import ru.rentplatform.catalogservice.core.dao.entity.AvailabilityId;
 import ru.rentplatform.catalogservice.core.dao.entity.Category;
 import ru.rentplatform.catalogservice.core.dao.entity.Item;
 import ru.rentplatform.catalogservice.core.dao.entity.Photo;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-04-25T15:11:50+0500",
+    date = "2026-05-01T16:41:34+0500",
     comments = "version: 1.6.3, compiler: IncrementalProcessingEnvironment from gradle-language-java-9.4.1.jar, environment: Java 21.0.8 (Microsoft)"
 )
 @Component
@@ -98,11 +104,47 @@ public class CatalogMapperImpl implements CatalogMapper {
         return itemShortResponse.build();
     }
 
+    @Override
+    public AvailabilityResponse toAvailabilityResponse(Availability availability) {
+        if ( availability == null ) {
+            return null;
+        }
+
+        AvailabilityResponse.AvailabilityResponseBuilder availabilityResponse = AvailabilityResponse.builder();
+
+        availabilityResponse.availableDate( availabilityIdAvailableDate( availability ) );
+        availabilityResponse.isAvailable( availability.getIsAvailable() );
+
+        return availabilityResponse.build();
+    }
+
+    @Override
+    public List<AvailabilityResponse> toAvailabilityResponseList(List<Availability> availabilities) {
+        if ( availabilities == null ) {
+            return null;
+        }
+
+        List<AvailabilityResponse> list = new ArrayList<AvailabilityResponse>( availabilities.size() );
+        for ( Availability availability : availabilities ) {
+            list.add( toAvailabilityResponse( availability ) );
+        }
+
+        return list;
+    }
+
     private Long categoryParentId(Category category) {
         Category parent = category.getParent();
         if ( parent == null ) {
             return null;
         }
         return parent.getId();
+    }
+
+    private LocalDate availabilityIdAvailableDate(Availability availability) {
+        AvailabilityId id = availability.getId();
+        if ( id == null ) {
+            return null;
+        }
+        return id.getAvailableDate();
     }
 }

@@ -36,7 +36,6 @@ public class CatalogController {
 
     private final CatalogService catalogService;
 
-
     @GetMapping("/items")
     public Page<ItemShortResponse> getActiveItems(
             @AuthenticationPrincipal Jwt jwt,
