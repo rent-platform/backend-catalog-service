@@ -1,6 +1,8 @@
 package ru.rentplatform.catalogservice.api.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -21,11 +23,13 @@ import static ru.rentplatform.catalogservice.api.ApiPaths.CATALOG;
 @RequestMapping(CATALOG + "/items/{itemId}/photos")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Фотографии объявлений", description = "Управление фотографиями объявления")
 public class PhotoController {
 
     private final PhotoService photoService;
 
     @GetMapping
+    @Operation(summary = "Список фото", description = "Получить все фотографии объявления")
     public List<PhotoResponse> getItemPhotos(@AuthenticationPrincipal Jwt jwt,
                                              @PathVariable UUID itemId) {
         UUID ownerId = UUID.fromString(jwt.getSubject());
@@ -33,6 +37,7 @@ public class PhotoController {
     }
 
     @PostMapping
+    @Operation(summary = "Добавить фото", description = "Добавить фотографию к объявлению")
     public PhotoResponse addPhoto(@AuthenticationPrincipal Jwt jwt,
                                   @PathVariable UUID itemId,
                                   @Valid @RequestBody AddPhotoRequest request) {
@@ -41,6 +46,7 @@ public class PhotoController {
     }
 
     @DeleteMapping("/{photoId}")
+    @Operation(summary = "Удалить фото", description = "Удалить фотографию из объявления")
     public MessageResponse deletePhoto(@AuthenticationPrincipal Jwt jwt,
                                        @PathVariable UUID itemId,
                                        @PathVariable UUID photoId) {
@@ -49,6 +55,7 @@ public class PhotoController {
     }
 
     @PutMapping("/order")
+    @Operation(summary = "Изменить порядок фото", description = "Переупорядочить фотографии объявления")
     public List<PhotoResponse> reorderPhotos(@AuthenticationPrincipal Jwt jwt,
                                              @PathVariable UUID itemId,
                                              @Valid @RequestBody ReorderPhotosRequest request) {

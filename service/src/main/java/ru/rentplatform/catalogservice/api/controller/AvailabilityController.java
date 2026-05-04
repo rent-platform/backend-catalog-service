@@ -52,7 +52,7 @@ public class AvailabilityController {
 
     @PutMapping("/{itemId}/availability")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Установить доступность товара (арендатор)",
+    @Operation(summary = "Установить доступность товара (арендодатель)",
             description = "Создаёт или обновляет слоты доступности. Только для владельца товара.",
             security = @SecurityRequirement(name = "bearerAuth"))
     public List<AvailabilityResponse> setAvailability(
@@ -65,7 +65,7 @@ public class AvailabilityController {
     }
 
     @DeleteMapping("/{itemId}/availability")
-    @Operation(summary = "Удалить слоты доступности (арендатор)",
+    @Operation(summary = "Удалить слоты доступности (арендодатель)",
             description = "Удаляет все записи доступности за указанный период. Только для владельца товара.",
             security = @SecurityRequirement(name = "bearerAuth"))
     public MessageResponse deleteAvailability(

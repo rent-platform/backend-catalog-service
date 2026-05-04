@@ -1,6 +1,8 @@
 package ru.rentplatform.catalogservice.api.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,11 +22,13 @@ import static ru.rentplatform.catalogservice.core.util.PageableUtils.buildPageab
 @RequestMapping(CATALOG + "/favorites")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Избранное", description = "Управление избранными объявлениями")
 public class FavoriteController {
 
     private final FavoriteService favoriteService;
 
     @PostMapping("/{itemId}")
+    @Operation(summary = "Добавить в избранное", description = "Добавляет объявление в избранное текущего пользователя")
     public MessageResponse addToFavorites(@AuthenticationPrincipal Jwt jwt,
                                           @PathVariable UUID itemId) {
         UUID userId = UUID.fromString(jwt.getSubject());
@@ -32,6 +36,7 @@ public class FavoriteController {
     }
 
     @DeleteMapping("/{itemId}")
+    @Operation(summary = "Удалить из избранного", description = "Удаляет объявление из избранного текущего пользователя")
     public MessageResponse removeFromFavorites(@AuthenticationPrincipal Jwt jwt,
                                                @PathVariable UUID itemId) {
         UUID userId = UUID.fromString(jwt.getSubject());
@@ -39,6 +44,7 @@ public class FavoriteController {
     }
 
     @GetMapping("/my")
+    @Operation(summary = "Моё избранное", description = "Список избранных объявлений текущего пользователя")
     public Page<ItemShortResponse> getMyFavorites(
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam(defaultValue = "0") int page,
@@ -54,6 +60,8 @@ public class FavoriteController {
     }
 
     @GetMapping("/{itemId}/status")
+    @Operation(summary = "Проверить избранное", description = "Проверяет, добавлено ли объявление в " +
+            "избранное текущего пользователя")
     public boolean isFavorite(@AuthenticationPrincipal Jwt jwt,
                               @PathVariable UUID itemId) {
         UUID userId = UUID.fromString(jwt.getSubject());
