@@ -15,7 +15,7 @@ public interface CatalogService {
 
     ItemResponse createItem(UUID ownerId, CreateItemRequest request);
 
-    ItemResponse getItemById(UUID itemId, UUID currentUserId);
+    ItemResponse getItemById(UUID itemId, UUID currentUserId, String currentUserRole);
 
     Page<ItemShortResponse> getActiveItems(ItemFilterRequest filter, UUID currentUserId, Pageable pageable);
 
@@ -28,4 +28,6 @@ public interface CatalogService {
     Page<ItemShortResponse> getSimilarItems(UUID itemId, UUID currentUserId, Pageable pageable);
 
     ItemDealInfoResponse getItemDealInfo(UUID itemId);
+
+    ItemStatsResponse getItemStats(UUID ownerId, UUID itemId);
 }

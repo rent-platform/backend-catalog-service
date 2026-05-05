@@ -1,5 +1,6 @@
 package ru.rentplatform.catalogservice.api.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -41,6 +42,7 @@ public class ItemResponse {
 
     private String moderationComment;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private Integer viewsCount;
 
     private List<PhotoResponse> photos;

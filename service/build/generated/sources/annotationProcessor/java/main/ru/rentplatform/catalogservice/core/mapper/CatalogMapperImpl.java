@@ -18,7 +18,7 @@ import ru.rentplatform.catalogservice.core.dao.entity.Photo;
 
 @Generated(
     value = "org.mapstruct.ap.MappingProcessor",
-    date = "2026-05-01T16:41:34+0500",
+    date = "2026-05-05T18:27:57+0500",
     comments = "version: 1.6.3, compiler: IncrementalProcessingEnvironment from gradle-language-java-9.4.1.jar, environment: Java 21.0.8 (Microsoft)"
 )
 @Component

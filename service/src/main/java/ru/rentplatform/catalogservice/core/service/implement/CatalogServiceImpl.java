@@ -10,6 +10,7 @@ import ru.rentplatform.catalogservice.api.dto.request.ItemFilterRequest;
 import ru.rentplatform.catalogservice.api.dto.request.PhotoRequest;
 import ru.rentplatform.catalogservice.api.dto.request.UpdateItemRequest;
 import ru.rentplatform.catalogservice.api.dto.response.*;
+import ru.rentplatform.catalogservice.api.exception.AccessDeniedException;
 import ru.rentplatform.catalogservice.api.exception.CategoryNotFoundException;
 import ru.rentplatform.catalogservice.api.exception.ItemNotFoundException;
 import ru.rentplatform.catalogservice.core.dao.entity.Category;
@@ -75,12 +76,12 @@ public class CatalogServiceImpl implements CatalogService {
 
         savePhotos(savedItem, request.getPhotos());
 
-        return buildItemResponse(savedItem, ownerId);
+        return buildItemResponse(savedItem, ownerId, null);
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public ItemResponse getItemById(UUID itemId, UUID currentUserId) {
+    @Transactional
+    public ItemResponse getItemById(UUID itemId, UUID currentUserId, String currentUserRole) {
         Item item = itemRepository.findByIdAndDeletedAtIsNull(itemId)
                 .orElseThrow(() -> new ItemNotFoundException("Item not found"));
 
@@ -88,7 +89,12 @@ public class CatalogServiceImpl implements CatalogService {
             throw new ItemNotFoundException("Item not found");
         }
 
-        return buildItemResponse(item, currentUserId);
+        if (currentUserId == null || !currentUserId.equals(item.getOwnerId())) {
+            item.setViewsCount(item.getViewsCount() + 1);
+            itemRepository.save(item);
+        }
+
+        return buildItemResponse(item, currentUserId, currentUserRole);
     }
 
     @Override
@@ -193,7 +199,7 @@ public class CatalogServiceImpl implements CatalogService {
             savePhotos(savedItem, request.getPhotos());
         }
 
-        return buildItemResponse(savedItem, ownerId);
+        return buildItemResponse(savedItem, ownerId, null);
     }
 
     @Override
@@ -248,6 +254,20 @@ public class CatalogServiceImpl implements CatalogService {
                 .build();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ItemStatsResponse getItemStats(UUID ownerId, UUID itemId) {
+        Item item = itemRepository.findByIdAndOwnerIdAndDeletedAtIsNull(itemId, ownerId)
+                .orElseThrow(() -> new AccessDeniedException("You are not allowed to view stats for this item"));
+
+        return ItemStatsResponse.builder()
+                .itemId(item.getId())
+                .title(item.getTitle())
+                .viewsCount(item.getViewsCount())
+                .status(item.getStatus().name())
+                .build();
+    }
+
     private void savePhotos(Item item, List<PhotoRequest> photoRequests) {
         if (photoRequests == null || photoRequests.isEmpty()) {
             return;
@@ -269,7 +289,8 @@ public class CatalogServiceImpl implements CatalogService {
         photoRepository.saveAll(photos);
     }
 
-    private ItemResponse buildItemResponse(Item item, UUID currentUserId) {
+    private ItemResponse buildItemResponse(Item item, UUID currentUserId, String currentUserRole) {
+
         List<PhotoResponse> photos = photoRepository.findAllByItem_IdOrderBySortOrderAsc(item.getId())
                 .stream()
                 .map(catalogMapper::toPhotoResponse)
@@ -289,6 +310,14 @@ public class CatalogServiceImpl implements CatalogService {
                         .rating(ownerData.getRating())
                         .build()
         );
+
+        boolean canSeeViews = currentUserId != null &&
+                (currentUserId.equals(item.getOwnerId()) ||
+                        "moderator".equals(currentUserRole) ||
+                        "admin".equals(currentUserRole) ||
+                        "super_admin".equals(currentUserRole));
+
+        response.setViewsCount(canSeeViews ? item.getViewsCount() : null);
 
         return response;
     }

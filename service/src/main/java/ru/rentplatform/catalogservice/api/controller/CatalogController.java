@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.rentplatform.catalogservice.api.dto.request.CreateItemRequest;
 import ru.rentplatform.catalogservice.api.dto.request.ItemFilterRequest;
 import ru.rentplatform.catalogservice.api.dto.request.UpdateItemRequest;
-import ru.rentplatform.catalogservice.api.dto.response.ItemDealInfoResponse;
-import ru.rentplatform.catalogservice.api.dto.response.ItemResponse;
-import ru.rentplatform.catalogservice.api.dto.response.ItemShortResponse;
-import ru.rentplatform.catalogservice.api.dto.response.MessageResponse;
+import ru.rentplatform.catalogservice.api.dto.response.*;
 import ru.rentplatform.catalogservice.core.dao.entity.ItemStatus;
 import ru.rentplatform.catalogservice.core.service.CatalogService;
 
@@ -75,11 +72,13 @@ public class CatalogController {
 
     @GetMapping("/items/{itemId}")
     @Operation(summary = "Детальная информация об объявлении",
-            description = "Публичный просмотр объявления. Для владельца показывает объявление в любом статусе")
+            description = "Публичный просмотр объявления. Для владельца показывает объявление в любом статусе",
+            security = @SecurityRequirement(name = "bearerAuth"))
     public ItemResponse getItemById(@AuthenticationPrincipal Jwt jwt,
                                     @PathVariable UUID itemId) {
         UUID currentUserId = jwt != null ? UUID.fromString(jwt.getSubject()) : null;
-        return catalogService.getItemById(itemId, currentUserId);
+        String currentUserRole = jwt != null ? jwt.getClaimAsString("role") : null;
+        return catalogService.getItemById(itemId, currentUserId, currentUserRole);
     }
 
     @PostMapping("/items")
@@ -153,5 +152,15 @@ public class CatalogController {
             description = "Публичный эндпоинт для получения данных о товаре при создании сделки")
     public ItemDealInfoResponse getItemDealInfo(@PathVariable UUID itemId) {
         return catalogService.getItemDealInfo(itemId);
+    }
+
+    @GetMapping("/my/items/{itemId}/stats")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Статистика объявления",
+            description = "Возвращает количество просмотров и статус. Только для владельца объявления")
+    public ItemStatsResponse getItemStats(@AuthenticationPrincipal Jwt jwt,
+                                          @PathVariable UUID itemId) {
+        UUID ownerId = UUID.fromString(jwt.getSubject());
+        return catalogService.getItemStats(ownerId, itemId);
     }
 }
