@@ -42,6 +42,10 @@ public class ItemStatusServiceImpl implements ItemStatusService {
             throw new InvalidItemStatusException("Only draft item can be sent to moderation");
         }
 
+        if (item.getCity() == null || item.getCity().isBlank()) {
+            throw new IllegalArgumentException("City is required before sending to moderation");
+        }
+
         validateItemBeforeModeration(item);
 
         item.setStatus(ItemStatus.MODERATION);

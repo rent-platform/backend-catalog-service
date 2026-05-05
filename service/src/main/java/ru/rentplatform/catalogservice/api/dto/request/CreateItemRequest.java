@@ -36,7 +36,6 @@ public class CreateItemRequest {
     @Digits(integer = 8, fraction = 2)
     private BigDecimal depositAmount;
 
-    @NotBlank
     @Size(max = 100)
     private String city;
 
