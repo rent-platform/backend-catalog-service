@@ -10,7 +10,7 @@ import java.util.UUID;
 
 public interface PhotoService {
 
-    List<PhotoResponse> getItemPhotos(UUID ownerId, UUID itemId);
+    List<PhotoResponse> getItemPhotos(UUID itemId);
 
     PhotoResponse addPhoto(UUID ownerId, UUID itemId, AddPhotoRequest request);
 

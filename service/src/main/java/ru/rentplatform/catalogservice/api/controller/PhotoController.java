@@ -30,10 +30,8 @@ public class PhotoController {
 
     @GetMapping
     @Operation(summary = "Список фото", description = "Получить все фотографии объявления")
-    public List<PhotoResponse> getItemPhotos(@AuthenticationPrincipal Jwt jwt,
-                                             @PathVariable UUID itemId) {
-        UUID ownerId = UUID.fromString(jwt.getSubject());
-        return photoService.getItemPhotos(ownerId, itemId);
+    public List<PhotoResponse> getItemPhotos(@PathVariable UUID itemId) {
+        return photoService.getItemPhotos(itemId);
     }
 
     @PostMapping

@@ -35,10 +35,12 @@ public class PhotoServiceImpl implements PhotoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PhotoResponse> getItemPhotos(UUID ownerId, UUID itemId) {
-        Item item = getOwnedItem(ownerId, itemId);
+    public List<PhotoResponse> getItemPhotos(UUID itemId) {
 
-        return photoRepository.findAllByItem_IdOrderBySortOrderAsc(item.getId())
+        itemRepository.findByIdAndDeletedAtIsNull(itemId)
+                .orElseThrow(() -> new ItemNotFoundException("Item not found"));
+
+        return photoRepository.findAllByItem_IdOrderBySortOrderAsc(itemId)
                 .stream()
                 .map(catalogMapper::toPhotoResponse)
                 .toList();
