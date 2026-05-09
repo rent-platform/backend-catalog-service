@@ -11,34 +11,38 @@
 * фотографии
 * избранное
 * модерацию
+* календарь доступности
+* статистику просмотров
 * статусы объявлений
 * рекомендации (похожие объявления)
 * интеграцию с user-service (owner preview)
+* интеграцию с deal-payment-service (deal-info)
 
 ---
 
 # Tech Stack
 
 * Java 21
-* Spring Boot
+* Spring Boot 4
 * Spring Security (JWT Resource Server)
 * Spring Data JPA
 * PostgreSQL
 * Flyway
 * MapStruct
-* OpenFeign
+* RestClient
 * Swagger (OpenAPI)
 * Docker
 
 ---
 
-# Ports
+## Ports
 
-| Service | Port |
-| ------- | ---- |
-| Gateway | 8080 |
-| Catalog | 8082 |
-| User    | 8081 |
+| Service      | Port |
+|-------------|------|
+| Gateway     | 8080 |
+| Catalog     | 8082 |
+| User        | 8081 |
+| Deal-Payment | 8083 
 
 ---
 
@@ -62,7 +66,10 @@
 Электроника
  └── Фототехника
 ```
-
+- id (BIGSERIAL)
+- categoryName, slug
+- parent (self-reference)
+- sortOrder, isActive
 ---
 
 ## Item
@@ -75,15 +82,18 @@
 * ownerId
 * category
 * title
-* description
+* itemDescription
 * pricePerDay
 * pricePerHour
-* deposit
+* depositAmount
 * city
 * pickupLocation
 * status
+* moderationComment
+* viewsCount
 * photos
 * isFavorite
+* createdAt, updatedAt, deletedAt
 
 ---
 
@@ -109,6 +119,26 @@
 * один item нельзя добавить дважды
 
 ---
+
+### Availability
+
+Календарь доступности товара.
+
+- itemId + availableDate (составной ключ)
+- isAvailable
+
+Владелец отмечает дни, когда вещь доступна для аренды.
+
+### ItemView
+
+Фиксация просмотров для защиты от накрутки.
+
+- id (BIGSERIAL)
+- itemId, viewerId
+- viewedAt
+
+---
+
 
 # Item Lifecycle
 
@@ -136,11 +166,12 @@ DRAFT
 
 ```
 GET /categories
+GET /categories/{categoryId}
 ```
 
 ---
 
-## Get items (поиск + фильтры)
+## Объявления (поиск + фильтры)
 
 ```
 GET /items
@@ -160,7 +191,7 @@ GET /items
 
 ---
 
-## Get item (карточка)
+## Карточка объявления
 
 ```
 GET /items/{itemId}
@@ -168,12 +199,14 @@ GET /items/{itemId}
 
 Особенности:
 
-* доступен без авторизации
-* если пользователь авторизован → возвращает isFavorite
+- публичный просмотр
+- если пользователь авторизован → возвращает `isFavorite`
+- владелец, модератор, admin, super_admin видят `viewsCount`
+- гость увеличивает счётчик просмотров
 
 ---
 
-## Similar items
+## Похожие объявления
 
 ```
 GET /items/{itemId}/similar
@@ -194,13 +227,37 @@ GET /items/{itemId}/similar
 
 ---
 
+## Календарь доступности
+`GET /items/{itemId}/availability?startDate=...&endDate=...
+
+- гость видит только для ACTIVE товаров
+- владелец видит в любом статусе
+
+## Информация для сделки`
+
+`GET /items/{itemId}/deal-info`
+
+Используется deal-payment-service при создании сделки.
+
+## Фотографии
+`GET /items/{itemId}/photos`
+
+Публичный просмотр фотографий объявления.
+
+## Рейтинг товара
+
+Рейтинг запрашивается из deal-payment-service:
+`GET /api/reviews/items/{itemId}/summary`
+
+---
+
 # Auth Required Endpoints
 
 Требуют JWT.
 
 ---
 
-## Create item
+## Создание объявления
 
 ```
 POST /items
@@ -214,7 +271,7 @@ DRAFT
 
 ---
 
-## My items
+## Мои объявления
 
 ```
 GET /my/items
@@ -228,21 +285,31 @@ GET /my/items
 
 ---
 
-## Update item
+## Обновление объявления
 
 ```
 PUT /items/{itemId}
 ```
 
+Только владелец.
+
 ---
 
-## Delete item
+## Удаление объявления
 
 ```
 DELETE /items/{itemId}
 ```
 
-Soft delete.
+Soft delete. Только владелец.
+
+
+## Статистика объявления
+```
+GET /my/items/{itemId}/stats
+```
+
+Возвращает `viewsCount`. Только для владельца.
 
 ---
 
@@ -250,15 +317,16 @@ Soft delete.
 
 ---
 
-## Send to moderation
+## Отправка на модерацию
 
 ```
 POST /items/{itemId}/send-to-moderation
 ```
+Проверяет обязательные поля: категория, заголовок, город, pickupLocation, цена, фото.
 
 ---
 
-## Return rejected → draft
+## Возврат из REJECTED в DRAFT
 
 ```
 POST /items/{itemId}/return-to-draft
@@ -266,27 +334,29 @@ POST /items/{itemId}/return-to-draft
 
 ---
 
-## Archive
+## Архивирование
 
 ```
 POST /items/{itemId}/archive
 ```
+Только для ACTIVE.
 
 ---
 
-## Restore archived → draft
+## Восстановление из архива в draft
 
 ```
 POST /items/{itemId}/restore
 ```
 
----
-
-# Moderation (Admin)
 
 ---
 
-## Moderation queue
+# Moderation (Moderator, Admin, Super Admin)
+
+---
+
+## Очередь модерации
 
 ```
 GET /admin/items/moderation
@@ -294,7 +364,7 @@ GET /admin/items/moderation
 
 ---
 
-## Approve
+## Одобрение
 
 ```
 POST /admin/items/{itemId}/approve
@@ -302,10 +372,41 @@ POST /admin/items/{itemId}/approve
 
 ---
 
-## Reject
+## Отклонение
 
 ```
 POST /admin/items/{itemId}/reject
+```
+
+## Календарь доступности
+
+### Настройка календаря (владелец)
+```
+PUT /items/{itemId}/availability
+```
+
+```json
+{
+  "slots": [
+    {"date": "2026-05-10", "isAvailable": true},
+    {"date": "2026-05-11", "isAvailable": false}
+  ]
+}
+```
+Только для статусов DRAFT и ACTIVE. 
+Нельзя менять прошедшие даты. Повторная установка того же статуса запрещена.
+
+### Удаление слотов
+
+```
+DELETE /items/{itemId}/availability
+```
+
+```json
+{
+"startDate": "2026-05-01",
+"endDate": "2026-05-31"
+}
 ```
 
 ---
@@ -314,7 +415,7 @@ POST /admin/items/{itemId}/reject
 
 ---
 
-## Add photo
+## Добавление фото
 
 ```
 POST /items/{itemId}/photos
@@ -326,15 +427,7 @@ POST /items/{itemId}/photos
 
 ---
 
-## Get photos
-
-```
-GET /items/{itemId}/photos
-```
-
----
-
-## Reorder
+## Переупорядочивание
 
 ```
 PUT /items/{itemId}/photos/order
@@ -342,7 +435,7 @@ PUT /items/{itemId}/photos/order
 
 ---
 
-## Delete photo
+## Удаление фото
 
 ```
 DELETE /items/{itemId}/photos/{photoId}
@@ -354,7 +447,7 @@ DELETE /items/{itemId}/photos/{photoId}
 
 ---
 
-## Add
+## Добавить в избранное
 
 ```
 POST /favorites/{itemId}
@@ -364,7 +457,7 @@ POST /favorites/{itemId}
 
 ---
 
-## Remove
+## Удалить из избранного
 
 ```
 DELETE /favorites/{itemId}
@@ -372,7 +465,7 @@ DELETE /favorites/{itemId}
 
 ---
 
-## Check
+## Проверить
 
 ```
 GET /favorites/{itemId}/status
@@ -380,7 +473,7 @@ GET /favorites/{itemId}/status
 
 ---
 
-## My favorites
+## Моё избранное
 
 ```
 GET /favorites/my
@@ -388,19 +481,46 @@ GET /favorites/my
 
 ---
 
-# Owner Preview
-
-Через user-service:
+# Интеграции
+## User Service
 
 ```
 GET /api/users/{userId}/public
 ```
 
-Возвращает:
+Возвращает nickname, avatarUrl, overallRating владельца.
 
-* nickname
-* avatarUrl
-* rating
+## Deal-Payment Service
+
+```
+GET /api/catalog/items/{itemId}/deal-info
+```
+Вызывается из deal-payment-service для получения информации о товаре при создании сделки.
+
+---
+
+## Роли и доступ к просмотрам
+
+| Роль                      | Видит viewsCount |
+|--------------------------|:---:|
+| Гость                     | ❌ |
+| Пользователь (не владелец) | ❌ |
+| Владелец                  | ✅ |
+| moderator                 | ✅ |
+| admin                     | ✅ |
+| super_admin               | ✅ |
+
+---
+
+## Environment Variables
+
+| Переменная               | Описание                  | По умолчанию |
+|--------------------------|--------------------------|-------------|
+| PG_HOST                  | PostgreSQL хост           | localhost   |
+| PG_PORT                  | PostgreSQL порт           | 5433        |
+| PG_DATABASE              | Имя БД                   | catalog_db  |
+| PG_USER                  | Пользователь БД           | postgres    |
+| PG_PASSWORD              | Пароль БД                | 12345       |
 
 ---
 
@@ -460,42 +580,17 @@ docker compose up --build
 
 ---
 
-# MVP Features
+## MVP Features
 
-✅ Каталог
-
-✅ Категории
-
-✅ Фото
-
-✅ Избранное
-
-✅ Модерация
-
-✅ Статусы
-
-✅ Фильтры
-
-✅ Похожие объявления
-
-✅ Owner preview
-
----
-
-# Future Improvements
-
-* S3 storage
-* роли ADMIN/MODERATOR
-* рейтинги и отзывы
-* бронирование
-* Elasticsearch
-
----
-
-# Notes
-
-* Публичные endpoints поддерживают работу без JWT
-* Если JWT есть → возвращается isFavorite
-* Все изменения статусов строго валидируются
-
----
+- Каталог с поиском и фильтрами
+- Категории (иерархические)
+- Фотографии (CRUD + порядок)
+- Избранное
+- Модерация (approve/reject)
+- Статусы объявлений (DRAFT → MODERATION → ACTIVE → ARCHIVED)
+- Похожие объявления
+- Календарь доступности от арендодателя
+- Статистика просмотров (защита от накрутки)
+- Роли: user, moderator, admin, super_admin
+- Owner preview (интеграция с user-service)
+- Deal-info (интеграция с deal-payment-service)
